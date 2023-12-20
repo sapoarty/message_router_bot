@@ -34,25 +34,19 @@
 
 	func handleUpdates(updates tgbotapi.UpdatesChannel) {
 		for update := range updates {
-			var message *tgbotapi.Message
-			var text string
-			var chatID int64
-			var userID int
-
-
 			if update.Message != nil {
 				log.Printf("Message from user id %d", update.Message.From.ID)
-				message = update.Message
-				text = message.Text
-				chatID = message.Chat.ID
-				userID = message.From.ID
-				splitMessage := strings.SplitN(text, " ", 2)
+				message := update.Message
+				chatID := message.Chat.ID
+				userID := message.From.ID
+				splitMessage := strings.Fields(message.Text)
 				command := splitMessage[0]
-				var text string
-				if len(splitMessage) > 1 {
-					text = splitMessage[1]
-				}
+
 				if handler, exists := handlerMap[command]; exists {
+					text := ""
+					if len(splitMessage) > 1 {
+						text = strings.Join(splitMessage[1:], " ")
+					}
 					handler(text, chatID, userID)
 				} else {
 					bot.ForwardMessage(message)

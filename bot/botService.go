@@ -24,8 +24,8 @@ func ForwardMessage(message *tgbotapi.Message) error {
     // Итерируемся через наши ключевые слова и их идентификаторы чата
     log.Println(text)
     for keyword, chatID := range database.UsersKeywordsChatsMap[userID] {
-        // Если сообщение содержит ключевое слово
-        if strings.Contains(text, keyword) {
+        // Если сообщение содержит ключевое слово (без учета регистра)
+        if strings.Contains(strings.ToLower(text), strings.ToLower(keyword)) {
             err, channelName := GetChannelNameByChatId(chatID)
             if err != nil {
                 log.Printf("Err GetChannelNameByChatId: %s\n", err)

@@ -1,24 +1,16 @@
 package database
 
 import (
+    "message_router_bot/structures"
     "log"
     _ "github.com/mattn/go-sqlite3"
     "github.com/jmoiron/sqlx"
+    "message_router_bot/utils"
 )
 
 var DB *sqlx.DB
 
-type Keyword struct {
-    ID       int64      `db:"id" json:"id"`
-    UserID   int        `db:"user_id" json:"user_id"`
-    ChatID   int64      `db:"chat_id" json:"chat_id"`
-    Keyword  string     `db:"keyword" json:"keyword"`
-}
-
-// Структура для хранения id и имен чатов и каналов
-var UsersKeywordsChatsMap = make(map[int]map[string]int64)
-
-func InitDb() {
+func Init() {
     var err error
     DB, err = sqlx.Connect("sqlite3", "./routing_bot_data.db")
     if err != nil {
@@ -38,22 +30,22 @@ func InitDb() {
         panic(err)
     }
     LoadKeywordsData()
-    PrintUsersKeywordsChatsMap()
+    utils.PrintUsersKeywordsChatsMap(0)
 }
 
 // LoadKeywordsData загружает данные о ключевых словах из базы данных и помещает их в глобальную карту keywordChatMap.
 func LoadKeywordsData() (error) {
-    var keywords []Keyword
+    var keywords []structures.Keyword
     err := DB.Select(&keywords, "SELECT * FROM keywords")
     if err != nil {
         return err
     }
 
     for _, keyword := range keywords {
-        if _, ok := UsersKeywordsChatsMap[keyword.UserID]; !ok {
-            UsersKeywordsChatsMap[keyword.UserID] = make(map[string]int64)
+        if _, ok := utils.UsersKeywordsChatsMap[keyword.UserID]; !ok {
+            utils.InitUsersKeywordsChatsMap(keyword.UserID)
         }
-        UsersKeywordsChatsMap[keyword.UserID][keyword.Keyword] = keyword.ChatID
+        utils.UsersKeywordsChatsMap[keyword.UserID][keyword.Keyword] = keyword.ChatID
     }
     return nil
 }

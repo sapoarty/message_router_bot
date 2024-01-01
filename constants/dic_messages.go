@@ -89,8 +89,8 @@ var DefaultGroupDesc = map[string]string{
 }
 
 var GroupHasKeywordsAndCanNotBeDefault = map[string]string{
-	"en": "This group already has some keywords [%s] and can not be used as unsorted messages group",
-	"ru": "Эта группа уже имеет установленные ключевые слова [%s] и не может быть использована, как группа для несортированных сообщений",
+	"en": "This group can not be used as unsorted messages group as it's already has some set keywords [%s]",
+	"ru": "Эта группа не может быть использована, как группа для несортированных сообщений, так как уже имеет установленные ключевые слова [%s]",
 }
 
 var GroupIsAlreadyDefaultGroup = map[string]string{

@@ -16,6 +16,7 @@ var handlerMap map[string]structures.BotMessagesHandler
 
 func ForwardMessage(message *tgbotapi.Message) error {
     var matchFound = false
+    var usedChatsList = make(map[int64]bool)
     userID := message.From.ID
     botChatID := message.Chat.ID
     messageToDelete := tgbotapi.NewDeleteMessage(botChatID, message.MessageID)
@@ -28,6 +29,9 @@ func ForwardMessage(message *tgbotapi.Message) error {
 
     // Итерируемся через наши ключевые слова и их идентификаторы чата
     for keyword, chatID := range utils.UsersKeywordsChatsMap[userID] {
+        if (usedChatsList[chatID] == true) {
+            continue
+        }
         // Если сообщение содержит ключевое слово (без учета регистра)
         if text != "" && strings.Contains(strings.ToLower(text), strings.ToLower(keyword)) {
             err, groupName := GetGroupNameByChatId(chatID)
@@ -51,7 +55,8 @@ func ForwardMessage(message *tgbotapi.Message) error {
                     return err
                 }
             } else {
-                matchFound = true                
+                matchFound = true
+                usedChatsList[chatID] = true
             }
         }
     }

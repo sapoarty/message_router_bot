@@ -80,6 +80,21 @@ func ForwardMessage(message *tgbotapi.Message) error {
         }
     }
 
+    if (matchFound) {
+        var chatNamesList []string
+        for chat := range usedChatsList {
+            _, chatName := GetGroupNameByChatId(chat)
+            chatNamesList = append(chatNamesList, chatName)
+        }
+        chatNamesListStr := strings.Join(chatNamesList, ", ")
+        runes := []rune(text)
+        if len(runes) > 100 {
+            text = string(runes[:100]) + "..."
+        }
+        msg := fmt.Sprintf("Сообщение [%s] было отправлено в чат/ы: %s", text, chatNamesListStr)
+        sendMessage(msg, botChatID)
+    }
+
     BotAPI.DeleteMessage(messageToDelete)
     return nil
 }

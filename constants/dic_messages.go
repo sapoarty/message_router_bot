@@ -113,3 +113,7 @@ var ChatDeleted = map[string]string{
 	"ru": "Групповой чат '%s' был удален. Если другие группы с ключевым словом '%s' не будут найдены, сообщение будет перенаправлено в группу по умолчанию.",
 }
 
+var  MessageHasBeenForwardedToChatsUsingKeywords = map[string]string{
+	"en": "Message \n\n [%s] \n\n has been forwarded to the chat/s using (keywords): %s",
+	"ru": "Сообщение \n\n [%s] \n\n было переотправлено в чат/ы, используя (ключевые слова): %s",
+}

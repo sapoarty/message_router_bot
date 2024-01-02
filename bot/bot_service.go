@@ -10,17 +10,18 @@ import (
     "log"
     "fmt"
     "strings"
+    "time"
 )
 
 var handlerMap map[string]structures.BotMessagesHandler
 
 func ForwardMessage(message *tgbotapi.Message) error {
     var matchFound = false
-    var usedChatsList = make(map[int64]bool)
+    var usedKeywordsForChatsList = make(map[int64]string)
     userID := message.From.ID
     botChatID := message.Chat.ID
     messageToDelete := tgbotapi.NewDeleteMessage(botChatID, message.MessageID)
-
+    userLang := config.UserStates[userID].Lang
     text := ""
     if message.Text != "" { // Проверяем, что сообщение содержит текст
         text = message.Text
@@ -29,7 +30,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
 
     // Итерируемся через наши ключевые слова и их идентификаторы чата
     for keyword, chatID := range utils.UsersKeywordsChatsMap[userID] {
-        if (usedChatsList[chatID] == true) {
+        if _, ok := usedKeywordsForChatsList[chatID]; ok {
             continue
         }
         // Если сообщение содержит ключевое слово (без учета регистра)
@@ -47,7 +48,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
             if err != nil {
                 if (strings.Contains(err.Error(), "Forbidden: the group chat was deleted")) {
                     _, groupName := GetGroupNameByChatId(chatID)
-                    msg := fmt.Sprintf(constants.ChatDeleted[config.UserStates[userID].Lang], groupName, keyword)
+                    msg := fmt.Sprintf(constants.ChatDeleted[userLang], groupName, keyword)
                     sendMessage(msg, botChatID)
                     database.DeleteChatData(chatID, userID)
                 } else {
@@ -56,7 +57,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
                 }
             } else {
                 matchFound = true
-                usedChatsList[chatID] = true
+                usedKeywordsForChatsList[chatID] = keyword
             }
         }
     }
@@ -65,7 +66,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
         // Если в сообщении не нашлось ключевого слова, отправляем в группу по-умолчанию
         chatID := utils.GetUserChatIDForKeyword(constants.DefaultGroup, userID)
         if chatID == 0 {
-            sendErrorMessage := tgbotapi.NewMessage(botChatID, constants.DefaulGroupIsNotSet[config.UserStates[userID].Lang])
+            sendErrorMessage := tgbotapi.NewMessage(botChatID, constants.DefaulGroupIsNotSet[userLang])
             BotAPI.Send(sendErrorMessage)
             return nil
         }
@@ -81,18 +82,22 @@ func ForwardMessage(message *tgbotapi.Message) error {
     }
 
     if (matchFound) {
-        var chatNamesList []string
-        for chat := range usedChatsList {
+        var chatNamesListStr string
+        for chat, keyword := range usedKeywordsForChatsList {
             _, chatName := GetGroupNameByChatId(chat)
-            chatNamesList = append(chatNamesList, chatName)
+            chatNamesListStr += fmt.Sprintf("%s(%s), ", chatName,keyword)
         }
-        chatNamesListStr := strings.Join(chatNamesList, ", ")
+        chatNamesListStr = strings.TrimSuffix(chatNamesListStr, ", ")
         runes := []rune(text)
         if len(runes) > 100 {
             text = string(runes[:100]) + "..."
         }
-        msg := fmt.Sprintf("Сообщение [%s] было отправлено в чат/ы: %s", text, chatNamesListStr)
-        sendMessage(msg, botChatID)
+        msg := fmt.Sprintf(constants.MessageHasBeenForwardedToChatsUsingKeywords[userLang], text, chatNamesListStr)
+        message, err := sendMessage(msg, botChatID)
+        if err != nil {
+            return err
+        }
+        go countdownAndDeleteMessage(botChatID, message)
     }
 
     BotAPI.DeleteMessage(messageToDelete)
@@ -152,7 +157,7 @@ func GetGroupNameByChatId(chatID int64) (error, string) {
     return nil, chat.Title
 }
 
-func sendMessage(msgText string, chatID int64, additionalArgs ...interface{}) error {
+func sendMessage(msgText string, chatID int64, additionalArgs ...interface{}) (tgbotapi.Message, error) {
     message := tgbotapi.NewMessage(chatID, msgText)
 
     // Обрабатываем дополнительные аргументы, если они есть
@@ -179,13 +184,13 @@ func sendMessage(msgText string, chatID int64, additionalArgs ...interface{}) er
 
 
     // Отправляем сообщение
-    _, err := BotAPI.Send(message)
+    result, err := BotAPI.Send(message)
     if err != nil {
         log.Printf("Ошибка при отправке сообщения в чат ID %d: %v", chatID, err)
-        return err
+        return result, err
     }
 
-    return nil
+    return result, nil
 }
 
 func setGroupDesc(chatID int64, userID int) {
@@ -214,4 +219,35 @@ func setGroupDesc(chatID int64, userID int) {
     }
 }
 
+func countdownAndDeleteMessage(chatID int64, message tgbotapi.Message) {
+    countdown := 10
+    // Обновляем сообщение каждую секунду
+    for countdown > 0 {
+        // Формируем текст с обратным отсчетом
+        msgText := fmt.Sprintf("%s\nСообщение удалится через %d секунд...", message.Text, countdown)
+
+        // Создаем запрос на редактирование сообщения
+        editMsg := tgbotapi.NewEditMessageText(chatID, message.MessageID, msgText)
+
+        // Отправляем запрос на редактирование сообщения
+        _, err := BotAPI.Send(editMsg)
+        if err != nil {
+            fmt.Println("Ошибка при редактировании сообщения:", err)
+            return
+        }
+
+        // Уменьшаем таймер обратного отсчета
+        countdown--
+
+        // Ждем 1 секунду
+        time.Sleep(1 * time.Second)
+    }
+
+    // Удаление сообщения после обратного отсчета
+    messageWithDesc := tgbotapi.NewDeleteMessage(chatID, message.MessageID)
+    _, delErr := BotAPI.Send(messageWithDesc)
+    if delErr != nil {
+        fmt.Println("Ошибка при удалении сообщения:", delErr)
+    }
+}
 

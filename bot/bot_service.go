@@ -29,7 +29,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
     }
 
     // Итерируемся через наши ключевые слова и их идентификаторы чата
-    for keyword, chatID := range utils.UsersKeywordsChatsMap[userID] {
+    for keyword, chatID := range structures.UsersKeywordsChatsMap[userID] {
         if _, ok := usedKeywordsForChatsList[chatID]; ok {
             continue
         }
@@ -64,7 +64,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
 
     if !matchFound {
         // Если в сообщении не нашлось ключевого слова, отправляем в группу по-умолчанию
-        chatID := utils.GetUserChatIDForKeyword(constants.DefaultGroup, userID)
+        chatID := structures.GetUserChatIDForKeyword(constants.DefaultGroup, userID)
         if chatID == 0 {
             sendErrorMessage := tgbotapi.NewMessage(botChatID, constants.DefaulGroupIsNotSet[userLang])
             BotAPI.Send(sendErrorMessage)
@@ -133,7 +133,7 @@ func printKeywordsToGroup(chatID int64, userID int) {
     }
 
     log.Printf("printKeywordsToGroup %s", groupName)
-    keywords := utils.GetKeywordsForUserChatID(chatID, userID)
+    keywords := structures.GetKeywordsForUserChatID(chatID, userID)
     if err != nil {
         log.Printf("Err GetKeywordsByGroupName: %s\n", err)
         return
@@ -201,7 +201,7 @@ func setGroupDesc(chatID int64, userID int) {
     if (utils.IsGroupDefault(chatID, userID)) {
         descText = fmt.Sprintf(constants.DefaultGroupDesc[lang])
     } else {
-        keywords := utils.GetKeywordsForUserChatID(chatID, userID)
+        keywords := structures.GetKeywordsForUserChatID(chatID, userID)
         if (len(keywords) > 0) {
             descText = fmt.Sprintf(
                 constants.GroupDesc[lang],

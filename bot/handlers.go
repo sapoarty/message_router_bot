@@ -66,7 +66,7 @@ func handleAddKeyWordsForGroup(text string, chatID int64, userID int) {
         return 
     }
     setGroupDesc(chatID, userID)
-    keywords := utils.GetKeywordsForUserChatID(chatID, userID)
+    keywords := structures.GetKeywordsForUserChatID(chatID, userID)
     msg := fmt.Sprintf(constants.KeywordsListIsChanged[userLang], strings.Join(keywords, ", "))
     sendMessage(msg, chatID)
 }
@@ -105,7 +105,7 @@ func handleDeleteKeyWordsForGroup(text string, chatID int64, userID int) {
     }
 
     setGroupDesc(chatID, userID)
-    keywords := utils.GetKeywordsForUserChatID(chatID, userID)
+    keywords := structures.GetKeywordsForUserChatID(chatID, userID)
     msg := fmt.Sprintf(constants.KeywordsListIsChanged[userLang], strings.Join(keywords, ", "))
     sendMessage(msg, chatID)
 }
@@ -113,7 +113,7 @@ func handleDeleteKeyWordsForGroup(text string, chatID int64, userID int) {
 func handleSetDefaultGroup(text string, chatID int64, userID int) {
     log.Printf("handleSetDefaultGroup text [%s], chatID %d, userID %d", text, chatID, userID)
     userLang := config.UserStates[userID].Lang
-    keywords := utils.GetKeywordsForUserChatID(chatID, userID)
+    keywords := structures.GetKeywordsForUserChatID(chatID, userID)
     if (utils.IsGroupDefault(chatID, userID)) {
         sendMessage(
             constants.GroupIsAlreadyDefaultGroup[userLang], 
@@ -130,7 +130,7 @@ func handleSetDefaultGroup(text string, chatID int64, userID int) {
         return
     }
 
-    oldDefaultChatId := utils.GetUserChatIDForKeyword(constants.DefaultGroup, userID)
+    oldDefaultChatId := structures.GetUserChatIDForKeyword(constants.DefaultGroup, userID)
     if (oldDefaultChatId != 0) {
         err, OldGroupName := GetGroupNameByChatId(oldDefaultChatId)
         if err != nil {
@@ -172,7 +172,7 @@ func handlePrintAllKeywords(text string, chatID int64, userID int) {
     log.Printf("handlePrintAllKeywords text [%s], chatID %d, userID %d", text, chatID, userID)
     userLang := config.UserStates[userID].Lang
 
-    keywordsMap := utils.GetKeywordsMapForUser(userID)
+    keywordsMap := structures.GetKeywordsMapForUser(userID)
     var msg strings.Builder
     if (len(keywordsMap) == 0) {
         sendMessage(constants.KeywordsAreNotSetYet[userLang], chatID)

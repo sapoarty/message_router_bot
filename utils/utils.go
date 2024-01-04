@@ -4,13 +4,11 @@ import (
 	"message_router_bot/config"
     "message_router_bot/structures"
     "message_router_bot/constants"
-    "encoding/json"
     "log"
     "strings"
+    "regexp"
 )
 
-// Структура для хранения id и имен чатов и каналов
-var UsersKeywordsChatsMap = make(map[int]map[string]int64)
 
 func InitUserData(userID int) {
     log.Printf("InitUserData for user %d", userID)
@@ -21,9 +19,6 @@ func InitUserData(userID int) {
     config.UserStates[userID] = structures.User{ExpectingInput: false, UserCommand: "", Lang: "ru"}
 }
 
-func InitUsersKeywordsChatsMap(userID int) {
-    UsersKeywordsChatsMap[userID] = make(map[string]int64)
-}
 
 func SetUserData(userID int, expectingInput *bool, userCommand *string, lang *string) {
     userState := config.UserStates[userID]
@@ -41,63 +36,6 @@ func SetUserData(userID int, expectingInput *bool, userCommand *string, lang *st
     }
     
     config.UserStates[userID] = userState
-}
-
-func DeleteKeywordFromLocalStore(chatID int64, keyword string, userID int) {
-    if keywordsListForUserId, ok := UsersKeywordsChatsMap[userID]; ok {
-        delete(keywordsListForUserId, keyword)
-    }
-}
-
-func DeleteChatFromLocalStore(chatID int64, userID int) {
-    if keywordsListForUserId, ok := UsersKeywordsChatsMap[userID]; ok {
-        for curKeyword, curChatId := range UsersKeywordsChatsMap[userID] {
-            if (curChatId == chatID) {
-                delete(keywordsListForUserId, curKeyword)
-            }
-        }
-    }
-}
-
-func PrintUsersKeywordsChatsMap(userID int) (error) {
-    var kwJson []byte
-    var err error
-
-    log.Println("UsersKeywordsChatsMap: ")
-    if (userID == 0) {
-        kwJson, err = json.Marshal(UsersKeywordsChatsMap)
-        if err != nil {
-            log.Println(err)
-            return err
-        }
-    } else {
-        kwJson, err = json.Marshal(UsersKeywordsChatsMap[userID])
-        if err != nil {
-            log.Println(err)
-            return err
-        }
-    }
-
-    log.Println(string(kwJson)) 
-    return nil
-}
-
-func GetKeywordsForUserChatID(chatID int64, userID int) ([]string) {
-    var keywordsList []string
-    for curKeyword, curChatId := range UsersKeywordsChatsMap[userID] {
-        if (curChatId == chatID) {
-            keywordsList = append(keywordsList, curKeyword)
-        }
-    }
-    return keywordsList
-}
-
-func GetUserChatIDForKeyword(keyword string, userID int) (int64) {
-    return UsersKeywordsChatsMap[userID][keyword] 
-}
-
-func GetKeywordsMapForUser(userID int) (map[string]int64) {
-    return UsersKeywordsChatsMap[userID]
 }
 
 func TrimSpacesFromStringList(keywordsList []string) ([]string){
@@ -119,6 +57,26 @@ func ToLowercaseSlice(slice []string) []string {
 }
 
 func IsGroupDefault(chatID int64, userID int) bool {
-    keywords := GetKeywordsForUserChatID(chatID, userID)
+    keywords := structures.GetKeywordsForUserChatID(chatID, userID)
     return (len(keywords) > 0 && keywords[0] == constants.DefaultGroup)
+}
+
+func SanitizeKeywords(keywordsList []string) []string {
+    var sanitizedKeywords []string
+    // Регулярное выражение, определяющее допустимые символы в ключевых словах
+    re := regexp.MustCompile("^[a-zA-Z0-9_]+$")
+
+    for _, keyword := range keywordsList {
+        // Удаление начальных и конечных пробелов
+        trimmedKeyword := strings.TrimSpace(keyword)
+        // Дополнительная проверка на длину ключевого слова
+        if len(trimmedKeyword) >= 1 && len(trimmedKeyword) <= 1024 {
+            // Проверка ключевого слова на соответствие допустимым символам
+            if re.MatchString(trimmedKeyword) {
+                sanitizedKeywords = append(sanitizedKeywords, trimmedKeyword)
+            }
+        }
+    }
+
+    return sanitizedKeywords
 }

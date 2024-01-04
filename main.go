@@ -1,11 +1,8 @@
 package main
 
 import (
-	// "message_router_bot/constants"
-	// "message_router_bot/structures"
 	"message_router_bot/database"
 	"message_router_bot/config"
-	// "message_router_bot/utils"
 	"message_router_bot/bot"
 	"log"
 	"github.com/go-telegram-bot-api/telegram-bot-api"

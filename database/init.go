@@ -5,7 +5,6 @@ import (
     "log"
     _ "github.com/mattn/go-sqlite3"
     "github.com/jmoiron/sqlx"
-    "message_router_bot/utils"
 )
 
 var DB *sqlx.DB
@@ -30,7 +29,7 @@ func Init() {
         panic(err)
     }
     LoadKeywordsData()
-    utils.PrintUsersKeywordsChatsMap(0)
+    structures.PrintUsersKeywordsChatsMap(0)
 }
 
 // LoadKeywordsData загружает данные о ключевых словах из базы данных и помещает их в глобальную карту keywordChatMap.
@@ -42,10 +41,10 @@ func LoadKeywordsData() (error) {
     }
 
     for _, keyword := range keywords {
-        if _, ok := utils.UsersKeywordsChatsMap[keyword.UserID]; !ok {
-            utils.InitUsersKeywordsChatsMap(keyword.UserID)
+        if _, ok := structures.UsersKeywordsChatsMap[keyword.UserID]; !ok {
+            structures.InitUsersKeywordsChatsMap(keyword.UserID)
         }
-        utils.UsersKeywordsChatsMap[keyword.UserID][keyword.Keyword] = keyword.ChatID
+        structures.UsersKeywordsChatsMap[keyword.UserID][keyword.Keyword] = keyword.ChatID
     }
     return nil
 }

@@ -114,6 +114,12 @@ var ChatDeleted = map[string]string{
 }
 
 var  MessageHasBeenForwardedToChatsUsingKeywords = map[string]string{
-	"en": "Message \n\n [%s] \n\n has been forwarded to the chat/s using (keywords): %s",
-	"ru": "Сообщение \n\n [%s] \n\n было переотправлено в чат/ы, используя (ключевые слова): %s",
+	"en": "Message with text \n\n [%s] \n\n has been forwarded to the chat/s using (keywords): %s",
+	"ru": "Сообщение с текстом \n\n [%s] \n\n было переотправлено в чат/ы, используя (ключевые слова): %s",
 }
+
+var  MessageHasBeenForwardedToDefaultGroup = map[string]string{
+	"en": "Message with text \n\n [%s] \n\n has been forwarded to the Default group: %s",
+	"ru": "Сообщение с текстом \n\n [%s] \n\n было переотправлено в группу по-умолчанию: %s",
+}
+

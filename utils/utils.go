@@ -80,3 +80,7 @@ func SanitizeKeywords(keywordsList []string) []string {
 
     return sanitizedKeywords
 }
+
+func IsMessageTextContainKeyword(origMsgText string,keyword string) bool {
+    return origMsgText != "" && strings.Contains(strings.ToLower(origMsgText), strings.ToLower(keyword))
+}

@@ -3,7 +3,7 @@ package bot
 import (
     "message_router_bot/messages"
     "message_router_bot/config"
-    "github.com/go-telegram-bot-api/telegram-bot-api"
+    "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func GetMenu(userID int) tgbotapi.ReplyKeyboardMarkup {

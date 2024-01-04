@@ -3,7 +3,7 @@ package bot
 import (
 	"os"
 	"log"
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"message_router_bot/utils"
 	"strconv"
 )

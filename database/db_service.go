@@ -23,7 +23,7 @@ func AddKeywords(keywordsList[] string, chatID int64, userID int) (error) {
             log.Printf("SetKeywords err %d", err) 
             return err 
         }
-        structures.UsersKeywordsChatsMap[userID][keyword] = chatID
+        structures.AddKeywordToLocalStore(chatID, keyword, userID)
     }
     log.Printf(
         "Keywords list [%s] added for chatID %d\n", 

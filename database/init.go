@@ -44,7 +44,7 @@ func LoadKeywordsData() (error) {
         if _, ok := structures.UsersKeywordsChatsMap[keyword.UserID]; !ok {
             structures.InitUsersKeywordsChatsMap(keyword.UserID)
         }
-        structures.UsersKeywordsChatsMap[keyword.UserID][keyword.Keyword] = keyword.ChatID
+        structures.AddKeywordToLocalStore(keyword.ChatID, keyword.Keyword, keyword.UserID)
     }
     return nil
 }

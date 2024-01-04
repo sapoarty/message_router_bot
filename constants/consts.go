@@ -1,3 +1,11 @@
 package constants
 
-const DefaultGroup = "default_group"
+import (
+	"time"
+)
+
+const (
+	DefaultGroup = "default_group"
+	MaxMediaGroupMessages = 10
+	MediaGroupWaitTime    = time.Second * 5
+)

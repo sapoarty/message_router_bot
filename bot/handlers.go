@@ -1,7 +1,7 @@
 package bot
 
 import (
-    "github.com/go-telegram-bot-api/telegram-bot-api"
+    "github.com/go-telegram-bot-api/telegram-bot-api/v5"
     "message_router_bot/constants"
     "message_router_bot/messages"
     "message_router_bot/structures"

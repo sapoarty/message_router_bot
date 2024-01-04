@@ -1,20 +1,21 @@
 package bot
 
 import (
-    "github.com/go-telegram-bot-api/telegram-bot-api"
+    tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"    
     "message_router_bot/constants"
     "message_router_bot/messages"
     "message_router_bot/database"
+    "message_router_bot/structures"
     "message_router_bot/config"
     "message_router_bot/utils"
     "fmt"
     "log"
+    "time"
     "strings"
     "os"
 )
 
 func HandleUpdates(updates tgbotapi.UpdatesChannel) {
-    // Этот цикл просматривает все обновления, которые приходят от телеграмма
     for update := range updates {
         // Обработка CallbackQuery от inline кнопок
         if update.CallbackQuery != nil {
@@ -22,8 +23,8 @@ func HandleUpdates(updates tgbotapi.UpdatesChannel) {
             // Получаем данные от CallbackQuery
             cq := update.CallbackQuery
             callBackData := cq.Data
-            callbackQueryID := cq.ID
-            userID := cq.From.ID
+            // callbackQueryID := cq.ID
+            userID := int(cq.From.ID)
             chatID := cq.Message.Chat.ID
             // Если нет зарегистрированного состояния для этого пользователя, создаем новое
             if _, ok := config.UserStates[userID]; !ok {
@@ -33,25 +34,55 @@ func HandleUpdates(updates tgbotapi.UpdatesChannel) {
             // Определяем, на какую inline кнопку было совершено нажатие используя callBackData
             handleCategorySelection(callBackData, chatID, userID)
 
-            // Обратный вызов API для уведомления Telegram, что CallbackQuery был получен и обработан
-            callbackConfig := tgbotapi.NewCallback(callbackQueryID, "")
-            if _, err := BotAPI.AnswerCallbackQuery(callbackConfig); err != nil {
-                log.Panic(err)
-            }
+
             // Проверяем, есть ли сообщение в обновлении
         } else if update.Message != nil {
-            log.Printf("Message %s from user id %d", update.Message.Text, update.Message.From.ID)
+            log.Printf(
+                "Message [%s] from user id %d with id = %d (media_group = %s) (Caption = %s)", 
+                update.Message.Text, 
+                update.Message.From.ID, 
+                update.Message.MessageID, 
+                update.Message.MediaGroupID,
+                update.Message.Caption,
+            )
             message := update.Message
             chatID := message.Chat.ID
-            userID := message.From.ID
+            userID := int(message.From.ID)
             text := strings.TrimSpace(message.Text)
-            chatType := message.Chat.Type
-            // Если нет зарегистрированного состояния для этого пользователя, создаем новое
+            
             if _, ok := config.UserStates[userID]; !ok {
                 utils.InitUserData(userID)
                 handlerMap = GetHandlerMapForUser(userID)
             }
 
+            if message.Photo != nil && message.MediaGroupID != "" {
+                log.Printf("Msg with photo group %s", message.MediaGroupID)
+                groupID := message.MediaGroupID
+                if _, ok := structures.MediaGroups[userID]; !ok {
+                    structures.InitMediaGroupsForUser(userID)
+                }
+                if _, ok := structures.MediaGroups[userID].Groups[groupID]; !ok {
+                    structures.InitMediaGroupsForGroupID(userID, groupID)
+                    log.Println("Устанавливаем таймер, так как создана новая группа")
+                    structures.MediaGroups[userID].Groups[groupID].Timer = time.AfterFunc(constants.MediaGroupWaitTime, func() {
+                        log.Println("Таймер сработал для медиа-группы")
+                        ForwardMessage(structures.MediaGroups[userID].Groups[groupID].Messages)
+                        structures.ClearMediaGroupMessages(userID, groupID)
+                    })
+                }
+                structures.AddMediaGroupsMessages(userID, groupID, message)
+                log.Printf("photo in group = %d", len(structures.MediaGroups[userID].Groups[groupID].Messages))
+                // Не отправляем сразу - сначала накапливаем всю группу
+                if IsMediaGroupComplete(userID, groupID) {
+                    log.Println("IsMediaGroupComplete = true")
+                    ForwardMessage(structures.MediaGroups[userID].Groups[groupID].Messages)
+                    structures.ClearMediaGroupMessages(userID, groupID)
+                }
+                continue
+            }
+
+            chatType := message.Chat.Type
+            // Если нет зарегистрированного состояния для этого пользователя, создаем новое
             botCommand, commandExists := handlerMap[text] 
 
             switch {
@@ -86,7 +117,7 @@ func HandleUpdates(updates tgbotapi.UpdatesChannel) {
                 }
             case message.NewChatMembers != nil: // Бот добавлен в группу
                 // Перебираем всех новых участников группы
-                for _, newUser := range *update.Message.NewChatMembers {
+                for _, newUser := range update.Message.NewChatMembers {
                     if newUser.ID == BotAPI.Self.ID {
                         // Бот был добавлен в группу
                         handleStart("", chatID, userID)
@@ -129,7 +160,7 @@ func handleCategorySelection(category string, chatID int64, userID int) {
 func handleDefaultGroupMessage(message *tgbotapi.Message) {
     text := strings.TrimSpace(message.Text)
     chatID := message.Chat.ID
-    userID := message.From.ID
+    userID := int(message.From.ID)
     userLang := config.UserStates[userID].Lang
 
     if (text == messages.CommandStart[userLang] || text == messages.CommandHelp[userLang]) {
@@ -161,7 +192,7 @@ func handleDefaultGroupMessage(message *tgbotapi.Message) {
 func handleBotMessage(message *tgbotapi.Message) {
     text := strings.TrimSpace(message.Text)
     chatID := message.Chat.ID
-    userID := message.From.ID
+    userID := int(message.From.ID)
     userLang := config.UserStates[userID].Lang
 
     if (text == messages.CommandStart[userLang] || text == messages.CommandHelp[userLang]) {
@@ -186,8 +217,39 @@ func handleBotMessage(message *tgbotapi.Message) {
     } else if (text == messages.CommandPrintAllKeywords[userLang]) {
         handlePrintAllKeywords(text, chatID, userID)
     } else {
-        // Иначе просто пересылаем сообщение, куда нужно
+        // Иначе просто пересылаем сообщение, куда нужно и удаляем исходное
         log.Println("ForwardMessage")
-        ForwardMessage(message)
+        ForwardMessage([]*tgbotapi.Message{message})
+        log.Println("Delete message ...")
+        if message != nil {
+            log.Println(" message != nil")
+            msg := tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)
+            if _, err := BotAPI.Request(msg); err != nil {
+                log.Println("Error deleting message:", err)
+            }
+            log.Println(" message deleted")
+        }    
     }
 }
+
+// Здесь проверяем, завершена ли группа медиафайлов
+func IsMediaGroupComplete(userID int, groupID string) bool {
+    userGroups, userExists := structures.MediaGroups[userID]
+    if (!userExists) {
+        return false
+    }
+    mediaGroup, groupExists := userGroups.Groups[groupID]
+    if (!groupExists) {
+        return false
+    }
+    if len(mediaGroup.Messages) >= constants.MaxMediaGroupMessages {
+        if mediaGroup.Timer != nil {
+            mediaGroup.Timer.Stop()
+            mediaGroup.Timer = nil
+        }
+        return true
+    }
+
+    return false
+}
+

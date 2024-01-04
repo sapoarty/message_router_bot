@@ -5,7 +5,7 @@ import (
 	"message_router_bot/config"
 	"message_router_bot/bot"
 	"log"
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func init() {
@@ -21,6 +21,6 @@ func main() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	updates, _ := bot.BotAPI.GetUpdatesChan(u)
+	updates := bot.BotAPI.GetUpdatesChan(u)
 	bot.HandleUpdates(updates)
 }

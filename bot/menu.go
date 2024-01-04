@@ -1,7 +1,7 @@
 package bot
 
 import (
-    "message_router_bot/constants"
+    "message_router_bot/messages"
     "message_router_bot/config"
     "github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -9,12 +9,12 @@ import (
 func GetMenu(userID int) tgbotapi.ReplyKeyboardMarkup {
     userLang := config.UserStates[userID].Lang
     commands := []string{
-        constants.CommandHelp[userLang],
-        constants.CommandAddByCategory[userLang],
-        constants.CommandAddKeywords[userLang],
-        constants.CommandDeleteKeywords[userLang],
-        constants.CommandSetDefaultGroup[userLang],
-        constants.CommandChangeLang[userLang],
+        messages.CommandHelp[userLang],
+        messages.CommandAddByCategory[userLang],
+        messages.CommandAddKeywords[userLang],
+        messages.CommandDeleteKeywords[userLang],
+        messages.CommandSetDefaultGroup[userLang],
+        messages.CommandChangeLang[userLang],
     }
     var keyboardButtons [][]tgbotapi.KeyboardButton
     for _, command := range commands {
@@ -29,9 +29,9 @@ func GetMenu(userID int) tgbotapi.ReplyKeyboardMarkup {
 func GetShortMenu(userID int) tgbotapi.ReplyKeyboardMarkup {
     userLang := config.UserStates[userID].Lang
     commands := []string{
-        constants.CommandHelp[userLang],
-        constants.CommandPrintAllKeywords[userLang],
-        constants.CommandChangeLang[userLang],
+        messages.CommandHelp[userLang],
+        messages.CommandPrintAllKeywords[userLang],
+        messages.CommandChangeLang[userLang],
     }
 
     var keyboardButtons [][]tgbotapi.KeyboardButton

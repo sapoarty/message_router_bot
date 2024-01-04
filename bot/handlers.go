@@ -3,6 +3,7 @@ package bot
 import (
     "github.com/go-telegram-bot-api/telegram-bot-api"
     "message_router_bot/constants"
+    "message_router_bot/messages"
     "message_router_bot/structures"
     "message_router_bot/database"
     "message_router_bot/config"
@@ -16,37 +17,46 @@ import (
 func GetHandlerMapForUser (userID int) (map[string]structures.BotMessagesHandler) {
     userLang := config.UserStates[userID].Lang
     return map[string]structures.BotMessagesHandler{
-        constants.CommandHelp[userLang]: {Handler: handleStart, NeedReply: false},
-        constants.CommandStart[userLang]: {Handler: handleStart, NeedReply: false},
-        constants.CommandAddByCategory[userLang]: {Handler: handleShowCategoriesInlineKeybord, NeedReply: false},
-        constants.CommandAddKeywords[userLang]: {Handler: handleAddKeyWordsForGroup, NeedReply: true},
-        constants.CommandDeleteKeywords[userLang]: {Handler: handleDeleteKeyWordsForGroup, NeedReply: true},
-        constants.CommandSetDefaultGroup[userLang]: {Handler: handleSetDefaultGroup, NeedReply: false},
-        constants.CommandPrintAllKeywords[userLang]: {Handler: handlePrintAllKeywords, NeedReply: false},
-        constants.CommandChangeLang[userLang]: {Handler: handleChangeLang, NeedReply: false},
+        messages.CommandHelp[userLang]: {Handler: handleStart, NeedReply: false},
+        messages.CommandStart[userLang]: {Handler: handleStart, NeedReply: false},
+        messages.CommandAddByCategory[userLang]: {Handler: handleShowCategoriesInlineKeybord, NeedReply: false},
+        messages.CommandAddKeywords[userLang]: {Handler: handleAddKeyWordsForGroup, NeedReply: true},
+        messages.CommandDeleteKeywords[userLang]: {Handler: handleDeleteKeyWordsForGroup, NeedReply: true},
+        messages.CommandSetDefaultGroup[userLang]: {Handler: handleSetDefaultGroup, NeedReply: false},
+        messages.CommandPrintAllKeywords[userLang]: {Handler: handlePrintAllKeywords, NeedReply: false},
+        messages.CommandChangeLang[userLang]: {Handler: handleChangeLang, NeedReply: false},
     }   
 }
 
 func handleStart(text string, chatID int64, userID int) {    
     log.Printf("handleStart text [%s], chatID %d, userID %d", text, chatID, userID)
     msg := fmt.Sprintf(
-        constants.GreetingsMessage[config.UserStates[userID].Lang] + constants.AwaitingCommand[config.UserStates[userID].Lang], 
+        messages.GreetingsMessage[config.UserStates[userID].Lang] + messages.AwaitingCommand[config.UserStates[userID].Lang], 
         os.Getenv("BotLink"),
     )
     sendMessage(msg, chatID,GetMenu(userID),"Markdown")
 }
 
-func handleChangeLang(text string, chatID int64, userID int) {
-    var userLang string
-    if (config.UserStates[userID].Lang == "ru") {
-        userLang = "en"
-    } else {
-        userLang = "ru"
-    }
-    utils.SetUserData(userID, nil, nil, &userLang)
-    handlerMap = GetHandlerMapForUser(userID)
 
-    sendMessage(constants.LangIsChanged[config.UserStates[userID].Lang], chatID, GetMenu(userID))
+func handleShowCategoriesInlineKeybord(text string, chatID int64, userID int) {
+    var rows [][]tgbotapi.InlineKeyboardButton
+    lang := config.UserStates[userID].Lang
+
+    msg := tgbotapi.NewMessage(chatID, messages.ChooseCategory[lang])
+    categoriesMap := constants.GetDefaultCategories()
+    for categoryName, _ := range categoriesMap {
+        button := tgbotapi.NewInlineKeyboardButtonData(categoryName, categoryName)
+        row := tgbotapi.NewInlineKeyboardRow(button)
+        rows = append(rows, row)
+    }
+
+    // Создаем Inline клавиатуру из rows
+    msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+
+    // Send the message with the inline keyboard
+    if _, err := BotAPI.Send(msg); err != nil {
+        log.Panic(err)
+    }
 }
 
 func handleAddKeyWordsForGroup(text string, chatID int64, userID int) {
@@ -56,7 +66,7 @@ func handleAddKeyWordsForGroup(text string, chatID int64, userID int) {
     trimmedLowercaseKeywordsList := utils.ToLowercaseSlice(trimmedKeywordsList)
 
     if len(trimmedLowercaseKeywordsList) == 0 {
-        sendMessage(constants.KeywordsListEmpty[userLang], chatID)
+        sendMessage(messages.KeywordsListEmpty[userLang], chatID)
         return
     }
 
@@ -67,7 +77,7 @@ func handleAddKeyWordsForGroup(text string, chatID int64, userID int) {
     }
     setGroupDesc(chatID, userID)
     keywords := structures.GetKeywordsForUserChatID(chatID, userID)
-    msg := fmt.Sprintf(constants.KeywordsListIsChanged[userLang], strings.Join(keywords, ", "))
+    msg := fmt.Sprintf(messages.KeywordsListIsChanged[userLang], strings.Join(keywords, ", "))
     sendMessage(msg, chatID)
 }
 
@@ -75,14 +85,14 @@ func handleDeleteKeyWordsForGroup(text string, chatID int64, userID int) {
     log.Printf("handleDeleteKeyWordsForGroup text [%s], chatID %d, userID %d", text, chatID, userID)
     userLang := config.UserStates[userID].Lang
     if (utils.IsGroupDefault(chatID, userID)) {
-        sendMessage(constants.GroupIsAlreadyDefaultGroup[userLang], chatID)
+        sendMessage(messages.GroupIsAlreadyDefaultGroup[userLang], chatID)
         return
     }
     trimmedKeywordsList := utils.TrimSpacesFromStringList(strings.Split(text, ","))
     trimmedLowercaseKeywordsList := utils.ToLowercaseSlice(trimmedKeywordsList)
 
     if len(trimmedLowercaseKeywordsList) == 0 {
-        sendMessage(constants.KeywordsListEmpty[userLang], chatID)
+        sendMessage(messages.KeywordsListEmpty[userLang], chatID)
         return
     }
 
@@ -94,19 +104,19 @@ func handleDeleteKeyWordsForGroup(text string, chatID int64, userID int) {
 
     if len(result) > 0 {
         sendMessage(
-            fmt.Sprintf(constants.KeywordsNotFound[userLang], strings.Join(result, ",")), 
+            fmt.Sprintf(messages.KeywordsNotFound[userLang], strings.Join(result, ",")), 
             chatID,
         )
     } else {
         sendMessage(
-            fmt.Sprintf(constants.AllKeywordsFoundAndDeleted[userLang]), 
+            fmt.Sprintf(messages.AllKeywordsFoundAndDeleted[userLang]), 
             chatID,
         )
     }
 
     setGroupDesc(chatID, userID)
     keywords := structures.GetKeywordsForUserChatID(chatID, userID)
-    msg := fmt.Sprintf(constants.KeywordsListIsChanged[userLang], strings.Join(keywords, ", "))
+    msg := fmt.Sprintf(messages.KeywordsListIsChanged[userLang], strings.Join(keywords, ", "))
     sendMessage(msg, chatID)
 }
 
@@ -116,7 +126,7 @@ func handleSetDefaultGroup(text string, chatID int64, userID int) {
     keywords := structures.GetKeywordsForUserChatID(chatID, userID)
     if (utils.IsGroupDefault(chatID, userID)) {
         sendMessage(
-            constants.GroupIsAlreadyDefaultGroup[userLang], 
+            messages.GroupIsAlreadyDefaultGroup[userLang], 
             chatID,
             tgbotapi.ReplyKeyboardRemove{
                 RemoveKeyboard: true,
@@ -125,7 +135,7 @@ func handleSetDefaultGroup(text string, chatID int64, userID int) {
         )
         return
     } else if (len(keywords) > 0) {
-        msg := fmt.Sprintf(constants.GroupHasKeywordsAndCanNotBeDefault[userLang], strings.Join(keywords, ", "))
+        msg := fmt.Sprintf(messages.GroupHasKeywordsAndCanNotBeDefault[userLang], strings.Join(keywords, ", "))
         sendMessage(msg, chatID)
         return
     }
@@ -142,7 +152,7 @@ func handleSetDefaultGroup(text string, chatID int64, userID int) {
             log.Println("Err DeleteKeywords: ", err)
             return 
         }
-        msgText := fmt.Sprintf(constants.DefaulGroupResetSuccessfully[userLang], OldGroupName)
+        msgText := fmt.Sprintf(messages.DefaulGroupResetSuccessfully[userLang], OldGroupName)
         sendMessage(msgText, chatID)
         setGroupDesc(oldDefaultChatId, userID)
     }
@@ -159,7 +169,7 @@ func handleSetDefaultGroup(text string, chatID int64, userID int) {
         return
     }
 
-    msgText := fmt.Sprintf(constants.DefaulGroupSetSuccessfully[userLang], groupName)
+    msgText := fmt.Sprintf(messages.DefaulGroupSetSuccessfully[userLang], groupName)
     sendMessage(
         msgText, 
         chatID, 
@@ -175,14 +185,14 @@ func handlePrintAllKeywords(text string, chatID int64, userID int) {
     keywordsMap := structures.GetKeywordsMapForUser(userID)
     var msg strings.Builder
     if (len(keywordsMap) == 0) {
-        sendMessage(constants.KeywordsAreNotSetYet[userLang], chatID)
+        sendMessage(messages.KeywordsAreNotSetYet[userLang], chatID)
     }
 
     // Организуем структуру, чтобы сгруппировать ключевые слова по chatID
     chatKeywords := make(map[int64][]string)
     for keyword, chatId := range keywordsMap {
         if (keyword == constants.DefaultGroup) {
-            keyword = constants.DefaulGroupAlias[userLang]
+            keyword = messages.DefaulGroupAlias[userLang]
         }
         chatKeywords[chatId] = append(chatKeywords[chatId], keyword)
     }
@@ -209,104 +219,16 @@ func handlePrintAllKeywords(text string, chatID int64, userID int) {
     sendMessage(msg.String(), chatID, "HTML")
 }
 
-func handleBotMessage(message *tgbotapi.Message) {
-    text := strings.TrimSpace(message.Text)
-    chatID := message.Chat.ID
-    userID := message.From.ID
-    userLang := config.UserStates[userID].Lang
 
-    if (text == constants.CommandStart[userLang] || text == constants.CommandHelp[userLang]) {
-        // Если приветственное сообщение или нужна помощь, выводим текст и короткое меню
-        msg := fmt.Sprintf(
-            constants.GreetingsMessage[config.UserStates[userID].Lang] + constants.AwaitingCommand[config.UserStates[userID].Lang], 
-            os.Getenv("BotLink"),
-        )
-        sendMessage(msg, chatID, GetShortMenu(userID), "Markdown")
-    } else if (text == constants.CommandChangeLang[userLang]) {
-        // Смена языка
-        var userLang string
-        if (config.UserStates[userID].Lang == "ru") {
-            userLang = "en"
-        } else {
-            userLang = "ru"
-        }
-        utils.SetUserData(userID, nil, nil, &userLang)
-        handlerMap = GetHandlerMapForUser(userID)
-
-        sendMessage(constants.LangIsChanged[config.UserStates[userID].Lang], chatID, GetShortMenu(userID))
-    } else if (text == constants.CommandPrintAllKeywords[userLang]) {
-        handlePrintAllKeywords(text, chatID, userID)
+func handleChangeLang(text string, chatID int64, userID int) {
+    var userLang string
+    if (config.UserStates[userID].Lang == "ru") {
+        userLang = "en"
     } else {
-        // Иначе просто пересылаем сообщение, куда нужно
-        log.Println("ForwardMessage")
-        ForwardMessage(message)
+        userLang = "ru"
     }
-}
+    utils.SetUserData(userID, nil, nil, &userLang)
+    handlerMap = GetHandlerMapForUser(userID)
 
-func handleDefaultGroupMessage(message *tgbotapi.Message) {
-    text := strings.TrimSpace(message.Text)
-    chatID := message.Chat.ID
-    userID := message.From.ID
-    userLang := config.UserStates[userID].Lang
-
-    if (text == constants.CommandStart[userLang] || text == constants.CommandHelp[userLang]) {
-        // Если приветственное сообщение или нужна помощь, выводим текст и короткое меню
-        msg := fmt.Sprintf(
-            constants.GreetingsMessage[userLang] +
-            constants.GroupIsAlreadyDefaultGroup[userLang] + "\n" +
-            constants.AwaitingCommand[userLang], 
-            os.Getenv("BotLink"),
-        )
-        sendMessage(msg, chatID, GetShortMenu(userID), "Markdown")
-    } else if (text == constants.CommandPrintAllKeywords[userLang]) {
-        handlePrintAllKeywords(text, chatID, userID)
-    } else if (text == constants.CommandChangeLang[userLang]) {
-        // Смена языка
-        var userLang string
-        if (config.UserStates[userID].Lang == "ru") {
-            userLang = "en"
-        } else {
-            userLang = "ru"
-        }
-        utils.SetUserData(userID, nil, nil, &userLang)
-        handlerMap = GetHandlerMapForUser(userID)
-
-        sendMessage(constants.LangIsChanged[config.UserStates[userID].Lang], chatID, GetShortMenu(userID))
-    }
-}
-
-func handleShowCategoriesInlineKeybord(text string, chatID int64, userID int) {
-    var rows [][]tgbotapi.InlineKeyboardButton
-    lang := config.UserStates[userID].Lang
-
-    msg := tgbotapi.NewMessage(chatID, constants.ChooseCategory[lang])
-    categoriesMap := constants.GetDefaultCategories()
-    for categoryName, _ := range categoriesMap {
-        button := tgbotapi.NewInlineKeyboardButtonData(categoryName, categoryName)
-        row := tgbotapi.NewInlineKeyboardRow(button)
-        rows = append(rows, row)
-    }
-
-    // Создаем Inline клавиатуру из rows
-    msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
-
-    // Send the message with the inline keyboard
-    if _, err := BotAPI.Send(msg); err != nil {
-        log.Panic(err)
-    }
-}
-
-func handleCategorySelection(category string, chatID int64, userID int) {
-    // Получаем карту категорий.
-    categoriesMap := constants.GetDefaultCategories()
-
-    // Проверяем, есть ли подкатегории в выбранной категории.
-    words, exists := categoriesMap[category]
-    if !exists {
-        log.Printf("Категория %s не найдена", category)
-        return
-    }
-
-    categoryWordsString := strings.Join(words, ",")
-    handleAddKeyWordsForGroup(categoryWordsString, chatID, userID)
+    sendMessage(messages.LangIsChanged[config.UserStates[userID].Lang], chatID, GetMenu(userID))
 }

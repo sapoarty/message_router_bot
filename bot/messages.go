@@ -3,6 +3,7 @@ package bot
 import (
     "github.com/go-telegram-bot-api/telegram-bot-api"
     "message_router_bot/constants"
+    "message_router_bot/messages"
     "message_router_bot/database"
     "message_router_bot/config"
     "message_router_bot/utils"
@@ -103,8 +104,90 @@ func handleUserInput(input string, chatID int64, userID int, userCommand string)
     expectingInput := false
     utils.SetUserData(userID, &expectingInput, nil, nil)
     msg := fmt.Sprintf(
-        constants.AwaitingCommand[config.UserStates[userID].Lang], 
+        messages.AwaitingCommand[config.UserStates[userID].Lang], 
         os.Getenv("BotLink"),
     )
     sendMessage(msg, chatID, GetMenu(userID), "Markdown")
+}
+
+
+func handleCategorySelection(category string, chatID int64, userID int) {
+    // Получаем карту категорий.
+    categoriesMap := constants.GetDefaultCategories()
+
+    // Проверяем, есть ли подкатегории в выбранной категории.
+    words, exists := categoriesMap[category]
+    if !exists {
+        log.Printf("Категория %s не найдена", category)
+        return
+    }
+
+    categoryWordsString := strings.Join(words, ",")
+    handleAddKeyWordsForGroup(categoryWordsString, chatID, userID)
+}
+
+func handleDefaultGroupMessage(message *tgbotapi.Message) {
+    text := strings.TrimSpace(message.Text)
+    chatID := message.Chat.ID
+    userID := message.From.ID
+    userLang := config.UserStates[userID].Lang
+
+    if (text == messages.CommandStart[userLang] || text == messages.CommandHelp[userLang]) {
+        // Если приветственное сообщение или нужна помощь, выводим текст и короткое меню
+        msg := fmt.Sprintf(
+            messages.GreetingsMessage[userLang] +
+            messages.GroupIsAlreadyDefaultGroup[userLang] + "\n" +
+            messages.AwaitingCommand[userLang], 
+            os.Getenv("BotLink"),
+        )
+        sendMessage(msg, chatID, GetShortMenu(userID), "Markdown")
+    } else if (text == messages.CommandPrintAllKeywords[userLang]) {
+        handlePrintAllKeywords(text, chatID, userID)
+    } else if (text == messages.CommandChangeLang[userLang]) {
+        // Смена языка
+        var userLang string
+        if (config.UserStates[userID].Lang == "ru") {
+            userLang = "en"
+        } else {
+            userLang = "ru"
+        }
+        utils.SetUserData(userID, nil, nil, &userLang)
+        handlerMap = GetHandlerMapForUser(userID)
+
+        sendMessage(messages.LangIsChanged[config.UserStates[userID].Lang], chatID, GetShortMenu(userID))
+    }
+}
+
+func handleBotMessage(message *tgbotapi.Message) {
+    text := strings.TrimSpace(message.Text)
+    chatID := message.Chat.ID
+    userID := message.From.ID
+    userLang := config.UserStates[userID].Lang
+
+    if (text == messages.CommandStart[userLang] || text == messages.CommandHelp[userLang]) {
+        // Если приветственное сообщение или нужна помощь, выводим текст и короткое меню
+        msg := fmt.Sprintf(
+            messages.GreetingsMessage[config.UserStates[userID].Lang] + messages.AwaitingCommand[config.UserStates[userID].Lang], 
+            os.Getenv("BotLink"),
+        )
+        sendMessage(msg, chatID, GetShortMenu(userID), "Markdown")
+    } else if (text == messages.CommandChangeLang[userLang]) {
+        // Смена языка
+        var userLang string
+        if (config.UserStates[userID].Lang == "ru") {
+            userLang = "en"
+        } else {
+            userLang = "ru"
+        }
+        utils.SetUserData(userID, nil, nil, &userLang)
+        handlerMap = GetHandlerMapForUser(userID)
+
+        sendMessage(messages.LangIsChanged[config.UserStates[userID].Lang], chatID, GetShortMenu(userID))
+    } else if (text == messages.CommandPrintAllKeywords[userLang]) {
+        handlePrintAllKeywords(text, chatID, userID)
+    } else {
+        // Иначе просто пересылаем сообщение, куда нужно
+        log.Println("ForwardMessage")
+        ForwardMessage(message)
+    }
 }

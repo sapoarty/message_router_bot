@@ -1,4 +1,4 @@
-package constants
+package messages
 
 var GreetingsMessage = map[string]string{
 	"en": "Welcome! This bot is here to help you sort through the many messages you have in your 'Saved Messages' group, " +

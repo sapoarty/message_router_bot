@@ -1,4 +1,4 @@
-package constants
+package messages
 
 var CommandStart = map[string]string{
     "en": "/start",

@@ -2,6 +2,7 @@ package bot
 
 import (
     "message_router_bot/constants"
+    "message_router_bot/messages"
     "message_router_bot/structures"
     "message_router_bot/config"
     "message_router_bot/utils"
@@ -48,7 +49,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
             if err != nil {
                 if (strings.Contains(err.Error(), "Forbidden: the group chat was deleted")) {
                     _, groupName := GetGroupNameByChatId(chatID)
-                    msg := fmt.Sprintf(constants.ChatDeleted[userLang], groupName, keyword)
+                    msg := fmt.Sprintf(messages.ChatDeleted[userLang], groupName, keyword)
                     sendMessage(msg, botChatID)
                     database.DeleteChatData(chatID, userID)
                 } else {
@@ -66,7 +67,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
         // Если в сообщении не нашлось ключевого слова, отправляем в группу по-умолчанию
         chatID := structures.GetUserChatIDForKeyword(constants.DefaultGroup, userID)
         if chatID == 0 {
-            sendErrorMessage := tgbotapi.NewMessage(botChatID, constants.DefaulGroupIsNotSet[userLang])
+            sendErrorMessage := tgbotapi.NewMessage(botChatID, messages.DefaulGroupIsNotSet[userLang])
             BotAPI.Send(sendErrorMessage)
             return nil
         }
@@ -92,7 +93,7 @@ func ForwardMessage(message *tgbotapi.Message) error {
         if len(runes) > 100 {
             text = string(runes[:100]) + "..."
         }
-        msg := fmt.Sprintf(constants.MessageHasBeenForwardedToChatsUsingKeywords[userLang], text, chatNamesListStr)
+        msg := fmt.Sprintf(messages.MessageHasBeenForwardedToChatsUsingKeywords[userLang], text, chatNamesListStr)
         message, err := sendMessage(msg, botChatID)
         if err != nil {
             return err
@@ -115,7 +116,7 @@ func askToReply(message *tgbotapi.Message) {
     utils.SetUserData(userID, &expectingInput, &text, nil)
 
     sendMessage(
-        constants.InputKeywordsListRequest[userLang], 
+        messages.InputKeywordsListRequest[userLang], 
         chatID,
         tgbotapi.ReplyKeyboardRemove{
             RemoveKeyboard: true,
@@ -125,7 +126,7 @@ func askToReply(message *tgbotapi.Message) {
 }
 
 func printKeywordsToGroup(chatID int64, userID int) {
-    lang := config.UserStates[userID].Lang
+    userLang := config.UserStates[userID].Lang
     err, groupName := GetGroupNameByChatId(chatID)
     if err != nil {
         log.Printf("Err GetGroupNameByChatId: %s\n", err)
@@ -141,9 +142,9 @@ func printKeywordsToGroup(chatID int64, userID int) {
 
     var msgText string
     if len(keywords) == 0 {
-        msgText = constants.KeywordsListEmpty[lang]
+        msgText = messages.KeywordsListEmpty[userLang]
     } else {
-        msgText = fmt.Sprintf(constants.KeywordsListForGroup[lang], groupName, strings.Join(keywords, ", "))
+        msgText = fmt.Sprintf(messages.KeywordsListForGroup[userLang], groupName, strings.Join(keywords, ", "))
     }
     sendMessage(msgText, chatID)
 }
@@ -194,17 +195,17 @@ func sendMessage(msgText string, chatID int64, additionalArgs ...interface{}) (t
 }
 
 func setGroupDesc(chatID int64, userID int) {
-    lang := config.UserStates[userID].Lang
+    userLang := config.UserStates[userID].Lang
     log.Printf("setGroupDesc chatID %d, userID %d", chatID, userID)
 
     var descText string
     if (utils.IsGroupDefault(chatID, userID)) {
-        descText = fmt.Sprintf(constants.DefaultGroupDesc[lang])
+        descText = fmt.Sprintf(messages.DefaultGroupDesc[userLang])
     } else {
         keywords := structures.GetKeywordsForUserChatID(chatID, userID)
         if (len(keywords) > 0) {
             descText = fmt.Sprintf(
-                constants.GroupDesc[lang],
+                messages.GroupDesc[userLang],
                 strings.Join(keywords, ", "),
             )
         }

@@ -7,5 +7,5 @@ import (
 const (
 	DefaultGroup = "default_group"
 	MaxMediaGroupMessages = 10
-	MediaGroupWaitTime    = time.Second * 5
+	MediaGroupWaitTime    = time.Second * 2
 )

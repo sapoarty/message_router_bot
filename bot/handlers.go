@@ -43,7 +43,11 @@ func handleShowCategoriesInlineKeybord(text string, chatID int64, userID int) {
     lang := config.UserStates[userID].Lang
 
     msg := tgbotapi.NewMessage(chatID, messages.ChooseCategory[lang])
-    categoriesMap := constants.GetDefaultCategories()
+    categoriesMap, err := GetDefaultCategories(userID)
+    if err != nil {
+        log.Panic(err)
+        return
+    }
     for categoryName, _ := range categoriesMap {
         button := tgbotapi.NewInlineKeyboardButtonData(categoryName, categoryName)
         row := tgbotapi.NewInlineKeyboardRow(button)

@@ -33,8 +33,12 @@ func HandleUpdates(updates tgbotapi.UpdatesChannel) {
 
             // Определяем, на какую inline кнопку было совершено нажатие используя callBackData
             handleCategorySelection(callBackData, chatID, userID)
-
-
+            // Создаем ответ на CallbackQuery
+            callbackConfig := tgbotapi.NewCallback(cq.ID, "")
+            if _, err := BotAPI.Request(callbackConfig); err != nil {
+                log.Printf("Error answering callback query: %v", err)
+                continue
+            }
             // Проверяем, есть ли сообщение в обновлении
         } else if update.Message != nil {
             log.Printf(
@@ -144,9 +148,13 @@ func handleUserInput(input string, chatID int64, userID int, userCommand string)
 
 func handleCategorySelection(category string, chatID int64, userID int) {
     // Получаем карту категорий.
-    categoriesMap := constants.GetDefaultCategories()
+    categoriesMap, err := GetDefaultCategories(userID)
+    if err != nil {
+        log.Panic(err)
+        return
+    }
 
-    // Проверяем, есть ли подкатегории в выбранной категории.
+    // Проверяем, есть ли выбранная категория.
     words, exists := categoriesMap[category]
     if !exists {
         log.Printf("Категория %s не найдена", category)

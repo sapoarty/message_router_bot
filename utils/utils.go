@@ -6,7 +6,6 @@ import (
     "message_router_bot/constants"
     "log"
     "strings"
-    "regexp"
 )
 
 
@@ -63,18 +62,13 @@ func IsGroupDefault(chatID int64, userID int) bool {
 
 func SanitizeKeywords(keywordsList []string) []string {
     var sanitizedKeywords []string
-    // Регулярное выражение, определяющее допустимые символы в ключевых словах
-    re := regexp.MustCompile("^[a-zA-Z0-9_]+$")
 
     for _, keyword := range keywordsList {
         // Удаление начальных и конечных пробелов
         trimmedKeyword := strings.TrimSpace(keyword)
         // Дополнительная проверка на длину ключевого слова
         if len(trimmedKeyword) >= 1 && len(trimmedKeyword) <= 1024 {
-            // Проверка ключевого слова на соответствие допустимым символам
-            if re.MatchString(trimmedKeyword) {
-                sanitizedKeywords = append(sanitizedKeywords, trimmedKeyword)
-            }
+            sanitizedKeywords = append(sanitizedKeywords, trimmedKeyword)
         }
     }
 

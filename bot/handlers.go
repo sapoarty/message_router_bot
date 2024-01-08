@@ -187,22 +187,23 @@ func handlePrintAllKeywords(text string, chatID int64, userID int) {
     userLang := config.UserStates[userID].Lang
 
     keywordsMap := structures.GetKeywordsMapForUser(userID)
-    var msg strings.Builder
-    if (len(keywordsMap) == 0) {
+    if len(keywordsMap) == 0 {
         sendMessage(messages.KeywordsAreNotSetYet[userLang], chatID)
+        return
     }
 
     // Организуем структуру, чтобы сгруппировать ключевые слова по chatID
     chatKeywords := make(map[int64][]string)
     for keyword, chatId := range keywordsMap {
-        if (keyword == constants.DefaultGroup) {
+        if keyword == constants.DefaultGroup {
             keyword = messages.DefaulGroupAlias[userLang]
         }
         chatKeywords[chatId] = append(chatKeywords[chatId], keyword)
     }
 
-    // Теперь итерируемся через chatKeywords для создания итогового сообщения
+    // Теперь итерируемся через chatKeywords для создания и отправки отдельных сообщений
     for chatId, keywords := range chatKeywords {
+        var msg strings.Builder
         err, chatName := GetGroupNameByChatId(chatId)
         if err != nil {
             chatName = "Unknown"
@@ -216,13 +217,10 @@ func handlePrintAllKeywords(text string, chatID int64, userID int) {
             }
             msg.WriteString(keyword)
         }
-        msg.WriteString("\n\n") // Завершаем список ключевых слов для текущего чата переносом строки
+        // Отправляем сформированное сообщение для текущего чата
+        sendMessage(msg.String(), chatID, "HTML")
     }
-
-    // Отправляем сформированное сообщение
-    sendMessage(msg.String(), chatID, "HTML")
 }
-
 
 func handleChangeLang(text string, chatID int64, userID int) {
     var userLang string

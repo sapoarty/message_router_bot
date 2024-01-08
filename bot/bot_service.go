@@ -31,12 +31,14 @@ func ForwardMessage(messagesList[] *tgbotapi.Message) error {
 
     if (len(messagesList) > 1) {
 
-        for i, msg := range messagesList {
+        for _, msg := range messagesList {
             if msg.Photo != nil {
                 biggestPhotoSize := msg.Photo[len(msg.Photo)-1]
                 media := tgbotapi.NewInputMediaPhoto(tgbotapi.FileID(biggestPhotoSize.FileID))
-                if i == 0 && msg.Caption != "" {
+                if msg.Caption != "" {
+                    log.Println("msg.Caption: " + msg.Caption)
                     media.Caption = msg.Caption
+                    origMsgText += msg.Caption
                 }
                 mediaGroup = append(mediaGroup, media)
                 messageToDel := tgbotapi.NewDeleteMessage(msg.Chat.ID, msg.MessageID)

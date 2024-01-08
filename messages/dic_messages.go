@@ -123,3 +123,13 @@ var  MessageHasBeenForwardedToDefaultGroup = map[string]string{
 	"ru": "Сообщение с текстом \n\n [%s] \n\n было переотправлено в группу по-умолчанию: %s",
 }
 
+var  DescUrl = map[string]string{
+	"en": "\n\nURL description: ",
+	"ru": "\n\n<b>Описание по ссылке: </b> ",
+}
+
+var  HidedUrlInMessage = map[string]string{
+	"en": "\n\nHided URL in message: ",
+	"ru": "\n\nСкрытая ссылка в сообщении: ",
+}
+

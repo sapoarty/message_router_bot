@@ -96,11 +96,12 @@ func ForwardMessage(messagesList[] *tgbotapi.Message) error {
             var msgToResend tgbotapi.Chattable
             if len(messagesList) > 1 {
                 log.Printf("Files in group %d", len(mediaGroup))
-                msgToResend = tgbotapi.NewMediaGroup(chatID, mediaGroup)
+                msgToResend := tgbotapi.NewMediaGroup(chatID, mediaGroup)
+                _, err = BotAPI.SendMediaGroup(msgToResend)   
             } else {
-                msgToResend = tgbotapi.NewCopyMessage(chatID, botChatID, message.MessageID)                
+                msgToResend = tgbotapi.NewCopyMessage(chatID, botChatID, message.MessageID)   
+                _, err = BotAPI.Send(msgToResend)             
             }
-            _, err = BotAPI.Send(msgToResend)
             if err != nil {
                 if (strings.Contains(err.Error(), "Forbidden: the group chat was deleted")) {
                     _, groupName := GetGroupNameByChatId(chatID)
